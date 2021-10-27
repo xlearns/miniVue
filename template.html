@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app">
+      <p @click="add">{{ counter }}</p>
+      <p my-text="counter"></p>
+      <p my-html="desc"></p>
+      <input type="text" my-model="name" />
+      <p>{{name}}</p>
+      <p>{{arr}}</p>
+    </div>
+
+    <script src="./index.js"></script>
+    <script src="./compile.js"></script>
+    <script>
+      const app = new MyVue({
+        el: "#app",
+        data: {
+          counter: 0,
+          desc: "<h1>这是描述</h1>",
+          name: "123",
+          arr: [1, 3, 4, 5],
+        },
+        methods: {
+          add() {
+            this.counter++;
+          },
+        },
+      });
+
+      setTimeout(() => {
+        app.arr.push(9);
+      }, 1000);
+    </script>
+  </body>
+</html>

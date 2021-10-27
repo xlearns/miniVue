@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>template</title>
+</head>
+<body>
+<div id='app'>
+	<h1>msg:{{msg}}</h1>
+	<p>{{num}}</p>
+	<input v-model='msg'/>
+	<h1>msg:{{msg}}</h1>
+</div>
+<script src="./reactive.js"></script>
+<script src='./miniVue.js'></script>
+<script>
+	let o = {
+		msg:"hello world",
+		num:100
+	}
+	let data = reactive(o)
+	function compie(dom,data){
+		let fragment = document.createDocumentFragment()
+		while(child = dom.firstChild){
+			fragment.appendChild(child)
+		}
+		 function replace(dom){
+		 	let reg = /\{\{(.*?)\}\}/g
+		 	Array.from(dom.childNodes).forEach(node=>{
+		 		let textContent = node.textContent
+		 		if(node.nodeType==1){
+		 			let attribute = node.attributes
+		 			 Array.from(attribute).forEach(attr => {
+		 			 	  let attributeName = attr.name
+					      let attributeValue = attr.value
+					      if (attributeName.includes('v-')) {
+					        node.value = o[attributeValue]
+					      }
+					      node.addEventListener('input', e => {
+					        let newVal = e.target.value
+					        data[attributeValue] = newVal
+					     })
+
+		 			 })
+		 		}
+		 		if(node.nodeType==3&& reg.test(textContent)){
+		 			 const nodeTextContent = node.textContent
+		 			 const replaceText = () => {
+			            node.textContent = nodeTextContent.replace(reg, (matched, placeholder) => {
+			                  return placeholder.split('.').reduce((prev, key) => {
+			                      return prev[key]
+			                  }, o)
+			              })
+			            }
+			          replaceText()
+		 		}
+		 		 // 如果还有子节点，继续递归 replace
+	            if (node.childNodes && node.childNodes.length) {
+	              replace(node)
+	            }
+		 	})
+		 }
+		 replace(fragment)
+		 dom.appendChild(fragment)
+		 return dom
+	}
+  let dom = compie(document.querySelector('#app'),data)
+	effect(()=>{
+    console.log(data.msg)
+	})
+	
+</script>
+</body>
+</html>
