@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>template</title>
+</head>
+<body>
+<div id='app'>
+	<h1>msg:{{msg}}</h1>
+	<p>{{num}}</p>
+	<input v-model='msg'/>
+	<h1>msg:{{msg}}</h1>
+	test
+	<br/>
+	<input type="text" v-model='test'>
+	<br/>
+	{{test}}
+</div>
+<script src="./reactive.js"></script>
+<script>
+	let o = {
+		msg:"hello world",
+		num:100,
+		test:''
+	}
+	let data = reactive(o)
+	let executionFn = {
+		textUpdater:function(node,value){
+			node.textContent =  data[value]
+		},
+		elementUpdater:function(node){
+			let attribute = node.attributes
+		  Array.from(attribute).forEach(attr=>{
+				let name = attr.name
+				let value = attr.value
+				if (name.includes('v-')) {
+					  node.value = o[value]
+						node.addEventListener('input',(e)=>{
+							let newVal = e.target.value
+							data[value] = e.target.value
+						})
+				}
+			})
+
+		}
+	}
+	function compile(el){
+		    const childNodes = el.childNodes
+				const reg = /\{\{(.*?)\}\}/g
+				Array.from(childNodes).forEach((node)=>{
+					if(node.nodeType==1){
+						//元素
+						update(node,'element')
+					}else if( node.nodeType === 3 && reg.test(node.textContent)){
+						//文本
+						let val	= void 0
+						node.textContent.replace(reg,(obj,key)=>{
+							val = key
+						})
+						if(val){
+							update(node, "text",val)
+						}
+					}
+					if (node.childNodes && node.childNodes.length > 0) {
+						compile(node);
+					}
+				})
+	}	
+	function update(node, dir,val){
+		const fn = executionFn[dir + "Updater"];
+		effect(()=>{
+			fn(node, val)
+		})
+	}
+	compile(document.querySelector('#app'))
+</script>
+</body>
+</html>
