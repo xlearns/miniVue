@@ -29,19 +29,10 @@
 			node.textContent =  data[value]
 		},
 		elementUpdater:function(node){
-			let attribute = node.attributes
-		  Array.from(attribute).forEach(attr=>{
-				let name = attr.name
-				let value = attr.value
-				if (name.includes('v-')) {
-					  node.value = o[value]
-						node.addEventListener('input',(e)=>{
-							let newVal = e.target.value
-							data[value] = e.target.value
-						})
-				}
-			})
-
+			
+		},
+		inputUpdater:function(node){
+			node.value =  data[value]
 		}
 	}
 	function compile(el){
@@ -50,7 +41,22 @@
 				Array.from(childNodes).forEach((node)=>{
 					if(node.nodeType==1){
 						//元素
-						update(node,'element')
+						let value
+						let type = 'element'
+						let attribute = node.attributes
+						Array.from(attribute).forEach(attr=>{
+								let name = attr.name
+								value = attr.value
+								if (name.includes('v-')) {
+									type = 'input'
+									node.value = o[value]
+									node.addEventListener('input',(e)=>{
+										let newVal = e.target.value
+										data[value] = e.target.value
+									})
+								}
+							})
+						update(node,type,value)
 					}else if( node.nodeType === 3 && reg.test(node.textContent)){
 						//文本
 						let val	= void 0
