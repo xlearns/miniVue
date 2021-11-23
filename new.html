@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>compie</title>
+</head>
+<body>
+  <div id="app">
+    <h1>{{name}}</h1>
+    <p>{{age}}</p>
+    <input type="text" v-model='msg'>
+    <h1>{{msg}}<h1>
+  </div>
+  <script>
+  let config = {
+    get(obj,key){
+        const res = obj[key]
+        track(obj,key)
+        return typeof res=='object'&&res!=null?reactive(res):res;
+    },
+    set(obj,key,val){
+      obj[key] = val
+      trigger(obj,key,val)
+    }
+  }
+  let stack = []
+  let weakmap = new WeakMap()
+  function track(obj,key){
+     let effect = stack[stack.length - 1]
+     if(effect){
+      let depsMap = weakmap.get(obj)
+      if(!depsMap){
+        depsMap = new Map()
+        weakmap.set(obj,depsMap)
+      }
+      let deps = depsMap.get(key)
+      if(!deps){
+        deps = new Set()
+        depsMap.set(key,deps)
+      }
+      if(!deps.has(effect)){
+        deps.add(effect)
+        effect.deps.push(effect)
+      }
+     }
+  }
+  function trigger(obj,key,val){
+    let depsMap = weakmap.get(obj)
+    let computeds = new Set()
+    let effects = new Set()
+    if(key){
+        let deps = depsMap.get(key)
+        deps.forEach(item=>{
+          if(item.computed){
+            computeds.add(item)
+          }else{
+            effects.add(item)
+          }
+        })
+    }
+    computeds.forEach(item=>item())
+    effects.forEach(item=>item())
+  }
+  function reactive(obj){
+    return new Proxy(obj,config)
+  }
+  function effect(fn,option={}){
+    let ef = createEffect(fn,option)
+    if(!ef.lazy){
+        ef()
+    }
+    return ef
+  }
+  function createEffect(fn,option){
+      const effect = function(...args){
+          return run(effect,fn,args)
+      }
+      effect.lazy = option.lazy
+      effect.deps = []
+      effect.computed = option.computed
+      return effect
+  }
+  function run(effect,fn,args){
+    if(stack.indexOf(effect)==-1){
+        try{
+          stack.push(effect)
+          return fn.apply(this,args)
+        }finally{
+          stack.pop()
+        }
+    }
+  }
+  function computed(fn){
+    let ef = effect(fn,{lazy:true,computed:true})
+    return {
+      runner:ef,
+      get value(){
+        return ef()
+      }
+    }
+  }  
+  </script>
+  <script>
+    let exeFn = {
+      text:function(node,val){
+        node.textContent = val
+      },
+      ele:function(){
+
+      },
+      input:function(node,val){
+          node.value = val
+      }
+    }
+    function complie(dom,data){
+        let childNodes = dom.childNodes
+        childNodes.forEach(node=>{
+          let reg = /\{\{(.*?)\}\}/g
+          let type = 'text'
+          if(node.nodeType==1){
+            type = 'ele'
+            let attribute = node.attributes
+            let name = node.tagName
+            let value
+            if(name=="INPUT"){
+              Array.from(attribute).forEach(item=>{
+                value = item.value
+                let name = item.name
+                if(name.includes('v-')){
+                    //绑定了v-model
+                    type = 'input'
+                    node.value = data[value]
+                    node.addEventListener('input',(e)=>{
+										let newVal = e.target.value
+										data[value] = e.target.value
+									})
+                } 
+              })
+            }
+            exe(type,node,data,value)
+          }else if(node.nodeType==3&& reg.test(node.textContent)){
+            type = 'text'
+             //内容
+            //  type = 'ele'
+            let value 
+            node.textContent.replace(reg,(c,l)=>{
+              value = l
+            })
+            exe(type,node,data,value)
+          }
+          if (node.childNodes && node.childNodes.length > 0) {
+						complie(node,data);
+					}
+        })
+    } 
+    function exe(type,node,data,val){
+         effect(()=>{
+           exeFn[type](node,data[val])
+         })
+    } 
+  </script>
+<script>
+    let el = document.querySelector('#app')
+    let o = reactive({
+      name:"hello wolrd",
+      age:100,
+      msg:"123"
+    })
+    complie(el,o)
+    window.addEventListener('click',()=>{
+      o.age += 1
+    })
+</script>
+</body>
+</html>  
